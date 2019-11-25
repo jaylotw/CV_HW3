@@ -2,11 +2,10 @@ import argparse
 import numpy as np
 import cv2
 import sys
-from main import coordinate_u, homography_transform, coordinate_2d
 
 debug = False
 MIN_MATCH_COUNT = 15
-DET_METHOD = 'SURF'
+DET_METHOD = 'SIFT'
 
 def main(ref_image, template ,video):
     ref_image = cv2.imread(ref_image)  ## load gray if you need.
@@ -39,7 +38,7 @@ def main(ref_image, template ,video):
     i = 0
     while(video.isOpened()):
         ret, frame = video.read()
-        print('Processing frame {:04d}'.format(i))
+        print('Processing frame {:03d}'.format(i))
         if ret:  # check whethere the frame is legal, i.e., there still exists a frame            
             
             # Find the keypoints and descriptors of frame
@@ -75,12 +74,14 @@ def main(ref_image, template ,video):
                 img_match = cv2.drawMatches(template, kp_m, frame, kp_f, good, None, **draw_params)
             
                 print('Final matches: %d' % (len(good)))
-                cv2.imwrite("./debug/{}/match_{:04d}_{:03d}.jpg".format(DET_METHOD, i, len(good)), img_match)
+                cv2.imwrite("./debug/{}/match_{:03d}_{:03d}.jpg".format(DET_METHOD, i, len(good)), img_match)
 
             # Warp the reference image and paste it on the video frame
             frame = cv2.warpPerspective(src=ref_image, M=H, dsize=(film_w, film_h), dst=frame, borderMode=cv2.BORDER_TRANSPARENT)
+            
+            # Draw the mapped frame
             if debug:
-                    cv2.imwrite("./debug/final/frame_{:04d}.png".format(i), frame)
+                    cv2.imwrite("./debug/final/frame_{:03d}.png".format(i), frame)
 
             videowriter.write(frame)
             i += 1
