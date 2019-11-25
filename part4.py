@@ -78,7 +78,8 @@ def main(ref_image, template ,video):
                 cv2.imwrite("./debug/{}/match_{:04d}_{:03d}.jpg".format(DET_METHOD, i, len(good)), img_match)
 
             # Warp the reference image and paste it on the video frame
-            test = cv2.warpPerspective(ref_image, H, (film_w, film_h))
+            test = cv2.warpPerspective(src=ref_image, M=H, dsize=(film_w, film_h))
+            cv2.fillConvexPoly(frame, test, color=Scalar(0))
             cv2.imwrite("test.jpg", test)
 
             videowriter.write(frame)
