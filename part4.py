@@ -2,8 +2,7 @@ import argparse
 import numpy as np
 import cv2
 import sys
-import time
-from tqdm import tqdm
+# from tqdm import tqdm
 
 debug = False
 MIN_MATCH_COUNT = 15
@@ -17,8 +16,6 @@ def main(ref_image, template ,video):
     film_fps = video.get(cv2.CAP_PROP_FPS)
     fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
     videowriter = cv2.VideoWriter("ar_video.mp4", fourcc, film_fps, (film_w, film_h))
-
-    last_frame = 224
 
     # Resize the reference image to match the size of marker
     ref_image = cv2.resize(ref_image, template.shape)
@@ -42,11 +39,12 @@ def main(ref_image, template ,video):
     
     # Find the keypoints and descriptors of marker
     kp_m, des_m = detector.detectAndCompute(template, None)    
-    
+
+    # for i in tqdm(range(224)):
     i = 0
     while(video.isOpened()):
+        print('Processing frame: {:03d}'.format(i))
         ret, frame = video.read()
-        print('Processing frame {:03d}'.format(i))
         if ret:  # check whethere the frame is legal, i.e., there still exists a frame            
             
             # Find the keypoints and descriptors of frame
@@ -64,8 +62,8 @@ def main(ref_image, template ,video):
                 print('#matches: %d' % (len(matches)))
                 
             if DET_METHOD == 'ORB':
-                # Get the best 10% of the matches
-                good = matches[:int(len(matches) * 0.05)]
+                # Get the best 30% of the matches
+                good = matches[:int(len(matches) * 0.3)]
             else:
                 # Store all the good matches as per Lowe's ratio test
                 good = list()
