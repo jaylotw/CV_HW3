@@ -2,6 +2,7 @@ import argparse
 import numpy as np
 import cv2
 import sys
+import time
 # from tqdm import tqdm
 
 debug = False
@@ -46,7 +47,6 @@ def main(ref_image, template ,video):
         print('Processing frame: {:03d}'.format(i))
         ret, frame = video.read()
         if ret:  # check whethere the frame is legal, i.e., there still exists a frame            
-            
             # Find the keypoints and descriptors of frame
             kp_f, des_f = detector.detectAndCompute(frame, None)
             
@@ -63,9 +63,9 @@ def main(ref_image, template ,video):
                 
             if DET_METHOD == 'ORB':
                 # Get the best 30% of the matches
-                good = matches[:int(len(matches) * 0.3)]
+                good = matches[: int(len(matches) * 0.3)]
             else:
-                # Store all the good matches as per Lowe's ratio test
+                # Get the good matches as per Lowe's ratio test
                 good = list()
                 for (m, n) in matches:
                     if m.distance < 0.75 * n.distance:
@@ -76,7 +76,7 @@ def main(ref_image, template ,video):
                 src_pts = np.float32([ kp_m[m.queryIdx].pt for m in good ]).reshape(-1,1,2)
                 dst_pts = np.float32([ kp_f[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
 
-                H, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+                homography, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
                 matchesMask = mask.ravel().tolist()
             else:
                 print("Not enough matches are found - %d/%d" % (len(good), MIN_MATCH_COUNT))
@@ -92,7 +92,7 @@ def main(ref_image, template ,video):
                 cv2.imwrite("./debug/{}/match_{:03d}_{:03d}.jpg".format(DET_METHOD, i, len(good)), img_match)
 
             # Warp the reference image and paste it on the video frame
-            frame = cv2.warpPerspective(src=ref_image, M=H, dsize=(film_w, film_h), dst=frame, borderMode=cv2.BORDER_TRANSPARENT)
+            frame = cv2.warpPerspective(src=ref_image, M=homography, dsize=(film_w, film_h), dst=frame, borderMode=cv2.BORDER_TRANSPARENT)
             
             # Draw the mapped frame
             if debug:
@@ -113,8 +113,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='Marker based AR')
     parser.add_argument("--video_path", dest="video_path", default='./input/ar_marker.mp4')
     args = parser.parse_args()
-    ## you should not change this part
+
     ref_path = './input/sychien.jpg'
     template_path = './input/marker.png'
     video_path = args.video_path  ## path to ar_marker.mp4
-    main(ref_path,template_path,video_path)
+    t_start = time.time()
+    
+    main(ref_path, template_path, video_path)
+    
+    t_end = time.time()
+    print('Elapse time: {:.2f} sec'.format(t_end - t_start))
