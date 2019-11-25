@@ -2,8 +2,10 @@ import argparse
 import numpy as np
 import cv2
 import sys
+import time
+from tqdm import tqdm
 
-debug = True
+debug = False
 MIN_MATCH_COUNT = 15
 DET_METHOD = 'ORB'
 
@@ -16,6 +18,8 @@ def main(ref_image, template ,video):
     fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
     videowriter = cv2.VideoWriter("ar_video.mp4", fourcc, film_fps, (film_w, film_h))
 
+    last_frame = 224
+
     # Resize the reference image to match the size of marker
     ref_image = cv2.resize(ref_image, template.shape)
 
@@ -25,7 +29,7 @@ def main(ref_image, template ,video):
     elif DET_METHOD == 'SIFT':
         detector = cv2.xfeatures2d.SIFT_create()
     elif DET_METHOD == 'ORB':
-        detector = cv2.ORB_create(nfeatures=100000, scoreType=cv2.ORB_FAST_SCORE)
+        detector = cv2.ORB_create(nfeatures=100000)
         
     if debug:
         print('detector: {}'.format(DET_METHOD))
@@ -59,10 +63,11 @@ def main(ref_image, template ,video):
                 print('#keypoints in marker: %d, frame: %d' % (len(des_m), len(des_f)))
                 print('#matches: %d' % (len(matches)))
                 
-            # Store all the good matches as per Lowe's ratio test
             if DET_METHOD == 'ORB':
-                good = matches[:int(len(matches) * 0.2)]
+                # Get the best 10% of the matches
+                good = matches[:int(len(matches) * 0.05)]
             else:
+                # Store all the good matches as per Lowe's ratio test
                 good = list()
                 for (m, n) in matches:
                     if m.distance < 0.75 * n.distance:
