@@ -2,8 +2,9 @@ import argparse
 import numpy as np
 import cv2
 import sys
+from main import coordinate_u, homography_transform, coordinate_2d
 
-debug = False
+debug = True
 MIN_MATCH_COUNT = 15
 DET_METHOD = 'SURF'
 
@@ -16,7 +17,8 @@ def main(ref_image, template ,video):
     fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
     videowriter = cv2.VideoWriter("ar_video.mp4", fourcc, film_fps, (film_w, film_h))
 
-    r_h, r_w, _r_c = ref_image.shape
+    # Resize the reference image to match the size of marker
+    ref_image = cv2.resize(ref_image, template.shape)
 
     # Initiate detector
     if DET_METHOD == 'SURF':
@@ -55,11 +57,12 @@ def main(ref_image, template ,video):
                 if m.distance < 0.75 * n.distance:
                     good.append(m)
             
+            # Run RANSAC and get the homography
             if len(good) > MIN_MATCH_COUNT:
                 src_pts = np.float32([ kp_m[m.queryIdx].pt for m in good ]).reshape(-1,1,2)
                 dst_pts = np.float32([ kp_f[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
 
-                M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+                H, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
                 matchesMask = mask.ravel().tolist()
             else:
                 print("Not enough matches are found - %d/%d" % (len(good), MIN_MATCH_COUNT))
@@ -73,6 +76,10 @@ def main(ref_image, template ,video):
             
                 print('Final matches: %d' % (len(good)))
                 cv2.imwrite("./debug/{}/match_{:04d}_{:03d}.jpg".format(DET_METHOD, i, len(good)), img_match)
+
+            # Warp the reference image and paste it on the video frame
+            test = cv2.warpPerspective(ref_image, H, (film_w, film_h))
+            cv2.imwrite("test.jpg", test)
 
             videowriter.write(frame)
             i += 1

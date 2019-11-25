@@ -1,3 +1,4 @@
 .vscode
 core
 debug
+__pycache__
