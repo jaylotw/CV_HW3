@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import time
 
-'''
+"""
 Coordinate System
 
     0/0---X--->
@@ -12,18 +12,19 @@ Coordinate System
      |
      |
      v
-'''
+"""
+
 
 def coordinate_u(img):
-    '''
+    """
     Each column of the coordinate matrix consists of [x, y, 1]^T
     
     Use the same coordinate system used by OpenCV
     (x: horizontal, y: vertical).
-    '''
-    h, w, ch = img.shape   
-    img_size = h*w
-    
+    """
+    h, w, ch = img.shape
+    img_size = h * w
+
     coordinate = np.ones((3, img_size), dtype=int)
     v1 = np.arange(h)
     v2 = np.arange(w)
@@ -34,18 +35,18 @@ def coordinate_u(img):
 
 
 def homography_transform(H, u):
-    '''
+    """
     Input H and u. Return a normalized v.
-    '''
-    v = np.dot(H, u)    # v=H*u
-    v *= 1/v[2]         # Normalize v
+    """
+    v = np.dot(H, u)  # v=H*u
+    v *= 1 / v[2]  # Normalize v
     return v
-    
-    
+
+
 def coordinate_2d(vec):
-    '''
+    """
     Input a 3 by n matrix and return a n by 2 matrix with each row corresponds to (x, y) position
-    '''
+    """
     dest = np.delete(vec, obj=2, axis=0).T
     return dest
 
@@ -55,32 +56,32 @@ def coordinate_2d(vec):
 def solve_homography(u, v, method=2):
     N = u.shape[0]
     if v.shape[0] is not N:
-        print('u and v should have the same size')
+        print("u and v should have the same size")
         return None
     if N < 4:
-        print('At least 4 points should be given')
+        print("At least 4 points should be given")
         return None
-    
-    b = np.zeros((2*N, 1))
+
+    b = np.zeros((2 * N, 1))
     H = np.zeros((3, 3))
 
     # Method 1
-    if(method==1):
+    if method == 1:
         # Build vector b
         b = v.reshape(-1, 1)
 
         # Build matrix A
-        A = np.zeros((2*N, 8))
+        A = np.zeros((2 * N, 8))
         for i in range(N):
-            A[2*i, 0:2] = u[i]
-            A[2*i, 2] = 1
-            A[2*i, 6] = - u[i, 0] * v[i, 0]
-            A[2*i, 7] = - u[i, 1] * v[i, 0]
+            A[2 * i, 0:2] = u[i]
+            A[2 * i, 2] = 1
+            A[2 * i, 6] = -u[i, 0] * v[i, 0]
+            A[2 * i, 7] = -u[i, 1] * v[i, 0]
 
-            A[2*i + 1, 3:5] = u[i]
-            A[2*i + 1, 5] = 1
-            A[2*i + 1, 6] = - u[i, 0] * v[i, 1]
-            A[2*i + 1, 7] = - u[i, 1] * v[i, 1]
+            A[2 * i + 1, 3:5] = u[i]
+            A[2 * i + 1, 5] = 1
+            A[2 * i + 1, 6] = -u[i, 0] * v[i, 1]
+            A[2 * i + 1, 7] = -u[i, 1] * v[i, 1]
 
         # Solve the linear matrix equation Ax=b
         x = np.linalg.solve(A, b)
@@ -90,22 +91,22 @@ def solve_homography(u, v, method=2):
         H[2, 2] = 1
 
     # Method 2
-    elif(method==2):
+    elif method == 2:
         # Build matrix A
-        A = np.zeros((2*N, 9))
+        A = np.zeros((2 * N, 9))
         for i in range(N):
-            A[2*i, 0:2] = u[i]
-            A[2*i, 2] = 1
-            A[2*i, 6] = - u[i, 0] * v[i, 0]
-            A[2*i, 7] = - u[i, 1] * v[i, 0]
-            A[2*i, 8] = - v[i, 0]
+            A[2 * i, 0:2] = u[i]
+            A[2 * i, 2] = 1
+            A[2 * i, 6] = -u[i, 0] * v[i, 0]
+            A[2 * i, 7] = -u[i, 1] * v[i, 0]
+            A[2 * i, 8] = -v[i, 0]
 
-            A[2*i + 1, 3:5] = u[i]
-            A[2*i + 1, 5] = 1
-            A[2*i + 1, 6] = - u[i, 0] * v[i, 1]
-            A[2*i + 1, 7] = - u[i, 1] * v[i, 1]
-            A[2*i + 1, 8] = - v[i, 1]
-        
+            A[2 * i + 1, 3:5] = u[i]
+            A[2 * i + 1, 5] = 1
+            A[2 * i + 1, 6] = -u[i, 0] * v[i, 1]
+            A[2 * i + 1, 7] = -u[i, 1] * v[i, 1]
+            A[2 * i + 1, 8] = -v[i, 1]
+
         # Compute SVD of A
         _, _, vh = np.linalg.svd(A)
 
@@ -119,8 +120,8 @@ def solve_homography(u, v, method=2):
 # corners are 4-by-2 arrays, representing the four image corner (x, y) pairs
 def transform(img, canvas, corners):
     h, w, ch = img.shape
-    img_size = h*w
-    img_corners = np.array([[0, 0], [w-1, 0], [0, h-1], [w-1, h-1]])
+    img_size = h * w
+    img_corners = np.array([[0, 0], [w - 1, 0], [0, h - 1], [w - 1, h - 1]])
     H = solve_homography(img_corners, corners)
 
     u = coordinate_u(img)
@@ -136,8 +137,8 @@ def transform(img, canvas, corners):
 
 def back_warping(src_img, project, corner):
     h, w, ch = project.shape
-    project_size = h*w
-    pro_corners = np.array([[0, 0], [w-1, 0], [0, h-1], [w-1, h-1]])
+    project_size = h * w
+    pro_corners = np.array([[0, 0], [w - 1, 0], [0, h - 1], [w - 1, h - 1]])
     H = solve_homography(pro_corners, corner)
 
     u = coordinate_u(project)
@@ -150,9 +151,9 @@ def back_warping(src_img, project, corner):
 
 
 def bilinear(src_img, t_y, t_x):
-    if t_x < 0 or t_y < 0 or t_x >= src_img.shape[1]-1 or t_y >= src_img.shape[0]-1:
+    if t_x < 0 or t_y < 0 or t_x >= src_img.shape[1] - 1 or t_y >= src_img.shape[0] - 1:
         return np.zeros(3)
-    
+
     x_left = round(t_x - int(t_x), 4)
     x_right = 1 - x_left
     y_low = round(t_y - int(t_y), 4)
@@ -176,55 +177,56 @@ def main():
     # Part 1
     print("========== PART 1 ===========")
     ts = time.time()
-    canvas = cv2.imread('./input/Akihabara.jpg')
-    img1 = cv2.imread('./input/lu.jpeg')
-    img2 = cv2.imread('./input/kuo.jpg')
-    img3 = cv2.imread('./input/haung.jpg')
-    img4 = cv2.imread('./input/tsai.jpg')
-    img5 = cv2.imread('./input/han.jpg')
+    canvas = cv2.imread("./input/Akihabara.jpg")
+    img1 = cv2.imread("./input/lu.jpeg")
+    img2 = cv2.imread("./input/kuo.jpg")
+    img3 = cv2.imread("./input/haung.jpg")
+    img4 = cv2.imread("./input/tsai.jpg")
+    img5 = cv2.imread("./input/han.jpg")
 
-    canvas_corners1 = np.array([[779,312],[1014,176],[739,747],[978,639]])
-    canvas_corners2 = np.array([[1194,496],[1537,458],[1168,961],[1523,932]])
-    canvas_corners3 = np.array([[2693,250],[2886,390],[2754,1344],[2955,1403]])
-    canvas_corners4 = np.array([[3563,475],[3882,803],[3614,921],[3921,1158]])
-    canvas_corners5 = np.array([[2006,887],[2622,900],[2008,1349],[2640,1357]])
-    
+    canvas_corners1 = np.array([[779, 312], [1014, 176], [739, 747], [978, 639]])
+    canvas_corners2 = np.array([[1194, 496], [1537, 458], [1168, 961], [1523, 932]])
+    canvas_corners3 = np.array([[2693, 250], [2886, 390], [2754, 1344], [2955, 1403]])
+    canvas_corners4 = np.array([[3563, 475], [3882, 803], [3614, 921], [3921, 1158]])
+    canvas_corners5 = np.array([[2006, 887], [2622, 900], [2008, 1349], [2640, 1357]])
+
     transform(img1, canvas, canvas_corners1)
     transform(img2, canvas, canvas_corners2)
     transform(img3, canvas, canvas_corners3)
     transform(img4, canvas, canvas_corners4)
     transform(img5, canvas, canvas_corners5)
-    
-    cv2.imwrite('part1.png', canvas)
+
+    cv2.imwrite("part1.png", canvas)
     te = time.time()
-    print('Elapse time: {}...'.format(te-ts))
+    print("Elapse time: {}...".format(te - ts))
 
     # Part 2
     print("========== PART 2 ===========")
     ts = time.time()
-    img = cv2.imread('./input/QR_code.jpg')
+    img = cv2.imread("./input/QR_code.jpg")
 
     output2 = np.zeros((200, 200, 3))
     # corner_screen = np.array([[778, 364], [2280, 541], [1578, 2895], [2558, 1662]])
     corner_QR = np.array([[1979, 1238], [2041, 1211], [2025, 1397], [2084, 1365]])
     back_warping(img, output2, corner_QR)
 
-    cv2.imwrite('part2.png', output2)
+    cv2.imwrite("part2.png", output2)
     te = time.time()
-    print('Elapse time: {}...'.format(te-ts))
+    print("Elapse time: {}...".format(te - ts))
 
     # Part 3
     print("========== PART 3 ===========")
     ts = time.time()
-    img_front = cv2.imread('./input/crosswalk_front.jpg')
-    
+    img_front = cv2.imread("./input/crosswalk_front.jpg")
+
     output3 = np.zeros((300, 500, 3))
     corners_crosswalk = np.array([[160, 129], [563, 129], [0, 286], [723, 286]])
     back_warping(img_front, output3, corners_crosswalk)
 
-    cv2.imwrite('part3.png', output3)
+    cv2.imwrite("part3.png", output3)
     te = time.time()
-    print('Elapse time: {}...'.format(te-ts))
+    print("Elapse time: {}...".format(te - ts))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
